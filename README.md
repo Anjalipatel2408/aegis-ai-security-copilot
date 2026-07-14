@@ -31,4 +31,4 @@ Visit `http://localhost:3000`
 
 
 ## Author
-Anjali Patel – [LinkedIn] [GitHub]
+Anjali Patel – [(https://github.com/Anjalipatel2408)]
