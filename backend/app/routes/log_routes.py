@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, UploadFile, File, Depends
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -8,6 +9,9 @@ from app.services.log_parser import parse_log_file
 from app.services.anomaly_detector import detect_anomalies
 from app.services.attack_classifier import classify_attack
 from app.services.llm_service import get_remediation_advice
+from app.services.pdf_report import generate_incident_report
+from app.services.email_service import send_alert_email
+from fastapi.responses import FileResponse
 
 router = APIRouter()
 
@@ -160,3 +164,38 @@ def get_remediation(entry_id: int, db: Session = Depends(get_db)):
         "attack_type": entry.attack_type,
         "remediation_advice": advice
     }
+@router.get("/generate-report/{log_id}")
+def generate_report(log_id: int, db: Session = Depends(get_db)):
+    log_file = db.query(LogFile).filter(LogFile.id == log_id).first()
+    attacks_query = db.query(ParsedLogEntry).filter(
+        ParsedLogEntry.log_file_id == log_id,
+        ParsedLogEntry.anomaly_score == -1
+    ).all()
+
+    attacks = [
+        {
+            "ip_address": a.ip_address,
+            "endpoint": a.endpoint,
+            "attack_type": a.attack_type,
+            "mitre_technique_id": a.mitre_technique_id,
+            "mitre_technique_name": a.mitre_technique_name
+        }
+        for a in attacks_query
+    ]
+
+    file_path = generate_incident_report(log_file.filename, attacks)
+    return FileResponse(file_path, media_type="application/pdf", filename=os.path.basename(file_path))
+
+@router.post("/send-alert/{log_id}")
+def send_alert(log_id: int, to_email: str, db: Session = Depends(get_db)):
+    attack_count = db.query(ParsedLogEntry).filter(
+        ParsedLogEntry.log_file_id == log_id,
+        ParsedLogEntry.anomaly_score == -1
+    ).count()
+
+    result = send_alert_email(
+        to_email=to_email,
+        subject=f"AEGIS AI Alert: {attack_count} threats detected",
+        body=f"AEGIS AI detected {attack_count} potential security threats in log ID {log_id}. Please review the dashboard immediately."
+    )
+    return result
