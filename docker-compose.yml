@@ -13,5 +13,25 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  backend:
+    build: ./backend
+    container_name: aegis_backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgresql://aegis_user:aegis_pass123@postgres:5432/aegis_db
+    volumes:
+      - ./backend/uploaded_logs:/app/uploaded_logs
+
+  frontend:
+    build: ./frontend
+    container_name: aegis_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
 volumes:
   postgres_data:
