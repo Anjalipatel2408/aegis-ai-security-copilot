@@ -29,8 +29,6 @@ docker-compose up --build
 \`\`\`
 Visit `http://localhost:3000`
 
-## Screenshots
-(dashboard screenshots ઉમેર)
 
 ## Author
 Anjali Patel – [LinkedIn] [GitHub]
